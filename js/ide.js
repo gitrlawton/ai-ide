@@ -754,13 +754,36 @@ document.addEventListener("DOMContentLoaded", async function () {
           // Clear input
           inputField.value = "";
 
-          // Simulate chatbot response
-          setTimeout(() => {
-            addMessage(
-              "Chatbot",
-              "I'm still learning! Stay tuned for full functionality."
-            );
-          }, 500);
+          // Send message to OpenRouter API
+          fetch("http://localhost:3000/api/chat", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              message: message, // Your chat message
+            }),
+          })
+            .then((response) => {
+              if (!response.ok) {
+                throw new Error("Network response was not ok");
+              }
+              return response.json();
+            })
+            .then((data) => {
+              // Extract the AI's response
+              const aiResponse = data.choices[0].message.content;
+
+              // Add AI message to chat
+              addMessage("Chatbot", aiResponse);
+            })
+            .catch((error) => {
+              console.error("Error:", error);
+              addMessage(
+                "Chatbot",
+                "Sorry, I encountered an error processing your message."
+              );
+            });
         } else {
           console.log("Empty message, not adding");
         }
