@@ -55,37 +55,59 @@ var layoutConfig = {
   },
   content: [
     {
-      type: "row",
+      type: "column",
       content: [
         {
-          type: "component",
-          width: 66,
-          componentName: "source",
-          id: "source",
-          title: "Source Code",
-          isClosable: false,
-          componentState: {
-            readOnly: false,
-          },
-        },
-        {
-          type: "column",
+          type: "row",
           content: [
             {
-              type: "component",
-              componentName: "stdin",
-              id: "stdin",
-              title: "Input",
-              isClosable: false,
-              componentState: {
-                readOnly: false,
-              },
+              type: "column",
+              width: 66,
+              content: [
+                {
+                  type: "component",
+                  componentName: "source",
+                  id: "source",
+                  title: "Source Code",
+                  isClosable: false,
+                  componentState: {
+                    readOnly: false,
+                  },
+                },
+                {
+                  type: "row",
+                  height: 40,
+                  content: [
+                    {
+                      type: "component",
+                      componentName: "stdin",
+                      id: "stdin",
+                      title: "Input",
+                      isClosable: false,
+                      componentState: {
+                        readOnly: false,
+                      },
+                    },
+                    {
+                      type: "component",
+                      componentName: "stdout",
+                      id: "stdout",
+                      title: "Output",
+                      isClosable: false,
+                      componentState: {
+                        readOnly: true,
+                      },
+                    },
+                  ],
+                },
+              ],
             },
             {
               type: "component",
-              componentName: "stdout",
-              id: "stdout",
-              title: "Output",
+              width: 34,
+              componentName: "chatbot",
+              id: "chatbot",
+              title: "IDE Chatbot",
               isClosable: false,
               componentState: {
                 readOnly: true,
@@ -609,6 +631,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   require(["vs/editor/editor.main"], function (ignorable) {
     layout = new GoldenLayout(layoutConfig, $("#judge0-site-content"));
 
+    // Register source component
     layout.registerComponent("source", function (container, state) {
       sourceEditor = monaco.editor.create(container.getElement()[0], {
         automaticLayout: true,
@@ -627,6 +650,133 @@ document.addEventListener("DOMContentLoaded", async function () {
       );
     });
 
+    // Register chatbot component
+    layout.registerComponent("chatbot", function (container, state) {
+      // Create chatbot container
+      const chatbotContainer = document.createElement("div");
+      chatbotContainer.className = "chatbot-container";
+      chatbotContainer.style.cssText =
+        "height:100%; display:flex; flex-direction:column;";
+
+      // Create messages area
+      const messagesContainer = document.createElement("div");
+      messagesContainer.style.cssText =
+        "flex-grow:1; overflow-y:auto; padding:10px; background-color:#f0f0f0;";
+
+      const messagesArea = document.createElement("div");
+      messagesArea.id = "golden-chatbot-messages";
+      messagesArea.style.cssText =
+        "height:100%; overflow-y:auto; display:flex; flex-direction:column;";
+      messagesContainer.appendChild(messagesArea);
+
+      // Create input area
+      const inputContainer = document.createElement("div");
+      inputContainer.style.cssText =
+        "display:flex; padding:10px; background-color:#e0e0e0;";
+
+      const inputField = document.createElement("input");
+      inputField.id = "golden-chatbot-input";
+      inputField.type = "text";
+      inputField.placeholder = "Ask me anything...";
+      inputField.style.cssText = "flex-grow:1; margin-right:10px;";
+
+      const sendButton = document.createElement("button");
+      sendButton.id = "golden-chatbot-send";
+      sendButton.textContent = "Send";
+
+      inputContainer.appendChild(inputField);
+      inputContainer.appendChild(sendButton);
+
+      // Assemble the chatbot container
+      chatbotContainer.appendChild(messagesContainer);
+      chatbotContainer.appendChild(inputContainer);
+
+      // Add to Golden Layout container
+      container.getElement()[0].appendChild(chatbotContainer);
+
+      // Debugging log
+      console.log("Chatbot DOM elements:", {
+        container: !!chatbotContainer,
+        messagesArea: !!messagesArea,
+        inputField: !!inputField,
+        sendButton: !!sendButton,
+      });
+
+      function addMessage(sender, message) {
+        console.log(
+          `Attempting to add message - Sender: ${sender}, Message: ${message}`
+        );
+
+        // Create message element
+        const messageWrapper = document.createElement("div");
+        messageWrapper.style.cssText =
+          "margin-bottom:10px; display:flex; flex-direction:column;";
+
+        const senderElement = document.createElement("strong");
+        senderElement.style.color = sender === "You" ? "#007bff" : "#6c757d";
+        senderElement.textContent = `${sender}:`;
+
+        const messageElement = document.createElement("div");
+        messageElement.style.cssText = `
+          background-color: ${sender === "You" ? "#e6f2ff" : "#f0f0f0"};
+          padding: 8px;
+          border-radius: 8px;
+          max-width: 90%;
+          word-wrap: break-word;
+        `;
+        messageElement.textContent = message;
+
+        messageWrapper.appendChild(senderElement);
+        messageWrapper.appendChild(messageElement);
+
+        // Add to messages area
+        messagesArea.appendChild(messageWrapper);
+
+        // Scroll to bottom
+        messagesArea.scrollTop = messagesArea.scrollHeight;
+
+        console.log(
+          "Message added. Total messages:",
+          messagesArea.children.length
+        );
+      }
+
+      // Send button click handler
+      sendButton.addEventListener("click", function () {
+        console.log("Send button clicked");
+        const message = inputField.value.trim();
+        console.log("Message value:", message);
+
+        if (message) {
+          // Add user message
+          addMessage("You", message);
+
+          // Clear input
+          inputField.value = "";
+
+          // Simulate chatbot response
+          setTimeout(() => {
+            addMessage(
+              "Chatbot",
+              "I'm still learning! Stay tuned for full functionality."
+            );
+          }, 500);
+        } else {
+          console.log("Empty message, not adding");
+        }
+      });
+
+      // Enter key handler
+      inputField.addEventListener("keypress", function (e) {
+        if (e.key === "Enter") {
+          sendButton.click();
+        }
+      });
+
+      console.log("Chatbot component fully initialized");
+    });
+
+    // Register stdin component
     layout.registerComponent("stdin", function (container, state) {
       stdinEditor = monaco.editor.create(container.getElement()[0], {
         automaticLayout: true,
@@ -640,6 +790,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       });
     });
 
+    // Register stdout component
     layout.registerComponent("stdout", function (container, state) {
       stdoutEditor = monaco.editor.create(container.getElement()[0], {
         automaticLayout: true,
@@ -736,26 +887,12 @@ document.addEventListener("DOMContentLoaded", async function () {
   };
 });
 
-// Default source code that appears in the IDE (C++ code of Dijkstra's algorithm)
+// Default source code that appears in the IDE
 const DEFAULT_SOURCE =
   "// Default source code. Open the file menu to open a file.";
 
-const DEFAULT_STDIN =
-  "\
-3\n\
-3 2\n\
-1 2 5\n\
-2 3 7\n\
-1 3\n\
-3 3\n\
-1 2 4\n\
-1 3 7\n\
-2 3 1\n\
-1 3\n\
-3 1\n\
-1 2 4\n\
-1 3\n\
-";
+// Default content in the STD Input window
+const DEFAULT_STDIN = "";
 
 const DEFAULT_COMPILER_OPTIONS = "";
 const DEFAULT_CMD_ARGUMENTS = "";
