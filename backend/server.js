@@ -11,10 +11,10 @@ const port = 3000;
 app.use(cors()); // Enable CORS for all routes
 app.use(express.json()); // Parse JSON bodies
 
-// Route to handle chat completions
-app.post("/api/chat", async (req, res) => {
+// Route to handle messages in side chat
+app.post("/api/side-chat", async (req, res) => {
   try {
-    const { message } = req.body;
+    const { message, fileContent } = req.body;
 
     const response = await fetch(
       "https://openrouter.ai/api/v1/chat/completions",
@@ -29,6 +29,15 @@ app.post("/api/chat", async (req, res) => {
         body: JSON.stringify({
           model: "google/gemini-2.0-flash-lite-preview-02-05:free",
           messages: [
+            {
+              role: "system",
+              content:
+                "You are a helpful code assistant. The following is the context of the file the user is working on:",
+            },
+            {
+              role: "system",
+              content: fileContent || "No file content provided",
+            },
             {
               role: "user",
               content: message,

@@ -672,7 +672,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       // Create input area
       const inputContainer = document.createElement("div");
       inputContainer.style.cssText =
-        "display:flex; padding:10px; background-color:#e0e0e0;";
+        "display:flex; padding:10px; padding-bottom:30px; background-color:#e0e0e0;";
 
       const inputField = document.createElement("input");
       inputField.id = "golden-chatbot-input";
@@ -702,29 +702,66 @@ document.addEventListener("DOMContentLoaded", async function () {
         sendButton: !!sendButton,
       });
 
-      function addMessage(sender, message) {
+      function addMessage(
+        sender,
+        message,
+        messageId = null,
+        isThinking = false
+      ) {
         console.log(
           `Attempting to add message - Sender: ${sender}, Message: ${message}`
         );
 
         // Create message element
         const messageWrapper = document.createElement("div");
+        if (messageId) {
+          messageWrapper.id = messageId;
+        }
         messageWrapper.style.cssText =
           "margin-bottom:10px; display:flex; flex-direction:column;";
 
         const senderElement = document.createElement("strong");
-        senderElement.style.color = sender === "You" ? "#007bff" : "#6c757d";
+        senderElement.style.color = sender === "Me" ? "#007bff" : "#6c757d";
         senderElement.textContent = `${sender}:`;
 
         const messageElement = document.createElement("div");
         messageElement.style.cssText = `
-          background-color: ${sender === "You" ? "#e6f2ff" : "#f0f0f0"};
-          padding: 8px;
-          border-radius: 8px;
-          max-width: 90%;
-          word-wrap: break-word;
+            background-color: ${sender === "Me" ? "#e6f2ff" : "#f0f0f0"};
+            padding: 8px;
+            border-radius: 8px;
+            max-width: 90%;
+            word-wrap: break-word;
         `;
-        messageElement.textContent = message;
+
+        if (isThinking) {
+          // Create thinking animation elements
+          messageElement.textContent = "Thinking";
+          const dots = document.createElement("span");
+          dots.textContent = "...";
+          dots.style.cssText = `
+                display: inline-block;
+                animation: blink 1.5s infinite;
+                width: 20px;
+                text-align: left;
+            `;
+          messageElement.appendChild(dots);
+
+          // Add animation style if it doesn't exist
+          if (!document.getElementById("blinkAnimation")) {
+            const style = document.createElement("style");
+            style.id = "blinkAnimation";
+            style.textContent = `
+                    @keyframes blink {
+                        0% { opacity: 0.2; }
+                        20% { opacity: 1; }
+                        100% { opacity: 0.2; }
+                    }
+                `;
+            document.head.appendChild(style);
+          }
+        } else {
+          messageElement.textContent = message;
+        }
 
         messageWrapper.appendChild(senderElement);
         messageWrapper.appendChild(messageElement);
@@ -748,20 +785,28 @@ document.addEventListener("DOMContentLoaded", async function () {
         console.log("Message value:", message);
 
         if (message) {
+          // Get the current editor's content
+          const fileContent = sourceEditor.getValue();
+
           // Add user message
-          addMessage("You", message);
+          addMessage("Me", message);
 
           // Clear input
           inputField.value = "";
 
+          // Add thinking message with a unique ID
+          const thinkingId = "thinking-" + Date.now();
+          addMessage("Judge0", "", thinkingId, true); // Pass true for isThinking
+
           // Send message to OpenRouter API
-          fetch("http://localhost:3000/api/chat", {
+          fetch("http://localhost:3000/api/side-chat", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              message: message, // Your chat message
+              message: message,
+              fileContent: fileContent,
             }),
           })
             .then((response) => {
@@ -771,16 +816,26 @@ document.addEventListener("DOMContentLoaded", async function () {
               return response.json();
             })
             .then((data) => {
-              // Extract the AI's response
-              const aiResponse = data.choices[0].message.content;
+              // Remove thinking message
+              const thinkingMessage = document.getElementById(thinkingId);
+              if (thinkingMessage) {
+                thinkingMessage.remove();
+              }
 
-              // Add AI message to chat
-              addMessage("Chatbot", aiResponse);
+              // Extract the AI's response and add it
+              const aiResponse = data.choices[0].message.content;
+              addMessage("Judge0", aiResponse);
             })
             .catch((error) => {
+              // Remove thinking message
+              const thinkingMessage = document.getElementById(thinkingId);
+              if (thinkingMessage) {
+                thinkingMessage.remove();
+              }
+
               console.error("Error:", error);
               addMessage(
-                "Chatbot",
+                "Judge0",
                 "Sorry, I encountered an error processing your message."
               );
             });
