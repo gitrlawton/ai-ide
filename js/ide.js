@@ -547,6 +547,93 @@ function refreshLayoutSize() {
   layout.updateSize();
 }
 
+// Define messagesArea
+const messagesArea = document.createElement("div");
+messagesArea.id = "golden-chatbot-messages";
+messagesArea.style.cssText =
+  "height:100%; overflow-y:auto; display:flex; flex-direction:column;";
+
+// Define addMessage function
+function addMessage(sender, message, messageId = null, isThinking = false) {
+  console.log(
+    `Attempting to add message - Sender: ${sender}, Message: ${message}`
+  );
+
+  // Ensure messagesArea is set
+  if (!messagesArea) {
+    messagesArea = document.getElementById("messages-area");
+  }
+
+  // If messagesArea still not found, log error and return
+  if (!messagesArea) {
+    console.error("Messages area not found");
+    return;
+  }
+
+  // Create message element
+  const messageWrapper = document.createElement("div");
+  if (messageId) {
+    messageWrapper.id = messageId;
+  }
+  messageWrapper.style.cssText =
+    "margin-bottom:10px; display:flex; flex-direction:column;";
+
+  const senderElement = document.createElement("strong");
+  senderElement.style.color = sender === "Me" ? "#007bff" : "#6c757d";
+  senderElement.textContent = `${sender}:`;
+
+  const messageElement = document.createElement("div");
+  messageElement.style.cssText = `
+      background-color: ${sender === "Me" ? "#e6f2ff" : "#f0f0f0"};
+      padding: 8px;
+      border-radius: 8px;
+      max-width: 90%;
+      word-wrap: break-word;
+      white-space: pre-wrap;
+  `;
+
+  if (isThinking) {
+    // Create thinking animation elements
+    messageElement.textContent = "Thinking";
+    const dots = document.createElement("span");
+    dots.textContent = "...";
+    dots.style.cssText = `
+          display: inline-block;
+          animation: blink 1.5s infinite;
+          width: 20px;
+          text-align: left;
+      `;
+    messageElement.appendChild(dots);
+
+    // Add animation style if it doesn't exist
+    if (!document.getElementById("blinkAnimation")) {
+      const style = document.createElement("style");
+      style.id = "blinkAnimation";
+      style.textContent = `
+              @keyframes blink {
+                  0% { opacity: 0.2; }
+                  20% { opacity: 1; }
+                  100% { opacity: 0.2; }
+              }
+          `;
+      document.head.appendChild(style);
+    }
+  } else {
+    messageElement.textContent = message;
+  }
+
+  messageWrapper.appendChild(senderElement);
+  messageWrapper.appendChild(messageElement);
+
+  // Add to messages area
+  messagesArea.appendChild(messageWrapper);
+
+  // Scroll to bottom
+  messagesArea.scrollTop = messagesArea.scrollHeight;
+
+  console.log("Message added. Total messages:", messagesArea.children.length);
+}
+
 window.addEventListener("resize", refreshLayoutSize);
 document.addEventListener("DOMContentLoaded", async function () {
   $("#select-language").dropdown();
@@ -663,10 +750,6 @@ document.addEventListener("DOMContentLoaded", async function () {
       messagesContainer.style.cssText =
         "flex-grow:1; overflow-y:auto; padding:10px; background-color:#f0f0f0;";
 
-      const messagesArea = document.createElement("div");
-      messagesArea.id = "golden-chatbot-messages";
-      messagesArea.style.cssText =
-        "height:100%; overflow-y:auto; display:flex; flex-direction:column;";
       messagesContainer.appendChild(messagesArea);
 
       // Create input area
@@ -701,82 +784,6 @@ document.addEventListener("DOMContentLoaded", async function () {
         inputField: !!inputField,
         sendButton: !!sendButton,
       });
-
-      function addMessage(
-        sender,
-        message,
-        messageId = null,
-        isThinking = false
-      ) {
-        console.log(
-          `Attempting to add message - Sender: ${sender}, Message: ${message}`
-        );
-
-        // Create message element
-        const messageWrapper = document.createElement("div");
-        if (messageId) {
-          messageWrapper.id = messageId;
-        }
-        messageWrapper.style.cssText =
-          "margin-bottom:10px; display:flex; flex-direction:column;";
-
-        const senderElement = document.createElement("strong");
-        senderElement.style.color = sender === "Me" ? "#007bff" : "#6c757d";
-        senderElement.textContent = `${sender}:`;
-
-        const messageElement = document.createElement("div");
-        messageElement.style.cssText = `
-            background-color: ${sender === "Me" ? "#e6f2ff" : "#f0f0f0"};
-            padding: 8px;
-            border-radius: 8px;
-            max-width: 90%;
-            word-wrap: break-word;
-        `;
-
-        if (isThinking) {
-          // Create thinking animation elements
-          messageElement.textContent = "Thinking";
-          const dots = document.createElement("span");
-          dots.textContent = "...";
-          dots.style.cssText = `
-                display: inline-block;
-                animation: blink 1.5s infinite;
-                width: 20px;
-                text-align: left;
-            `;
-          messageElement.appendChild(dots);
-
-          // Add animation style if it doesn't exist
-          if (!document.getElementById("blinkAnimation")) {
-            const style = document.createElement("style");
-            style.id = "blinkAnimation";
-            style.textContent = `
-                    @keyframes blink {
-                        0% { opacity: 0.2; }
-                        20% { opacity: 1; }
-                        100% { opacity: 0.2; }
-                    }
-                `;
-            document.head.appendChild(style);
-          }
-        } else {
-          messageElement.textContent = message;
-        }
-
-        messageWrapper.appendChild(senderElement);
-        messageWrapper.appendChild(messageElement);
-
-        // Add to messages area
-        messagesArea.appendChild(messageWrapper);
-
-        // Scroll to bottom
-        messagesArea.scrollTop = messagesArea.scrollHeight;
-
-        console.log(
-          "Message added. Total messages:",
-          messagesArea.children.length
-        );
-      }
 
       // Send button click handler
       sendButton.addEventListener("click", function () {
@@ -963,6 +970,11 @@ document.addEventListener("DOMContentLoaded", async function () {
       }
     }
   };
+  // Initialize AI Line Edit Feature
+  createAILineEditPopup();
+
+  // Add event listener for text selection
+  document.addEventListener("mouseup", showAILineEditPopup);
 });
 
 // Default source code that appears in the IDE
@@ -1035,4 +1047,378 @@ const EXTENSIONS_TABLE = {
 
 function getLanguageForExtension(extension) {
   return EXTENSIONS_TABLE[extension] || { flavor: CE, language_id: 43 }; // Plain Text (https://ce.judge0.com/languages/43)
+}
+
+// AI Line Editing Feature Variables
+let aiLineEditPopup = null;
+let aiLineEditInput = null;
+let currentHighlightedLines = null;
+
+function createAILineEditPopup() {
+  // Create popup container
+  aiLineEditPopup = document.createElement("div");
+  aiLineEditPopup.id = "ai-line-edit-popup";
+  aiLineEditPopup.style.cssText = `
+  position: absolute;
+  background-color: white;
+  border: none;
+  padding: 0;
+  z-index: 1000;
+  display: none;
+  width: fit-content; 
+  height: fit-content; 
+`;
+
+  // Create "Edit" button
+  const editButton = document.createElement("button");
+  editButton.textContent = "Edit";
+  editButton.style.cssText = `
+  background-color: #4CAF50; 
+  color: white;
+  border: none;
+  padding: 3px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 0.8em;
+  display: block; 
+`;
+
+  editButton.addEventListener("click", () => {
+    aiLineEditPopup.style.display = "none";
+    showAILineEditInput();
+  });
+
+  aiLineEditPopup.appendChild(editButton);
+  document.body.appendChild(aiLineEditPopup);
+}
+
+function showAILineEditPopup(event) {
+  console.log("showAILineEditPopup called");
+
+  // Target Monaco Editor container
+  const editorContainer = document.querySelector(".monaco-editor.focused");
+
+  if (!editorContainer) {
+    console.error("Monaco Editor container not found");
+    return;
+  }
+
+  console.log("Editor Container found:", editorContainer);
+
+  // Get the Monaco Editor instance
+  const editor = window.monaco.editor
+    .getEditors()
+    .find((ed) => ed.getDomNode() === editorContainer);
+
+  if (!editor) {
+    console.error("No active Monaco Editor found");
+    return;
+  }
+
+  console.log("Monaco Editor instance found:", editor);
+
+  // Get the current selection
+  const selection = editor.getSelection();
+  const selectedText = editor.getModel().getValueInRange(selection);
+
+  if (!selectedText) {
+    console.error("No text selected");
+    return;
+  }
+
+  console.log("Selection details:", {
+    selectedText,
+    startLineNumber: selection.startLineNumber,
+    startColumn: selection.startColumn,
+    endLineNumber: selection.endLineNumber,
+    endColumn: selection.endColumn,
+  });
+
+  currentHighlightedLines = selectedText;
+
+  // Get the position of the selection
+  const startPosition = editor.getTopForLineNumber(selection.startLineNumber);
+  const endColumn = editor.getOffsetForColumn(
+    selection.endLineNumber,
+    selection.endColumn
+  );
+
+  console.log("Positioning details:", {
+    startPosition,
+    endColumn,
+  });
+
+  // Ensure popup is created with the edit button
+  if (!aiLineEditPopup) {
+    console.log("Creating AI Line Edit Popup");
+    createAILineEditPopup();
+  }
+
+  // Ensure the edit button is present
+  if (!aiLineEditPopup.querySelector("button")) {
+    console.log("Creating Edit Button");
+    const editButton = document.createElement("button");
+    editButton.textContent = "Edit";
+    editButton.style.cssText = `
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 3px;
+      cursor: pointer;
+      display: block;
+    `;
+    editButton.addEventListener("click", () => {
+      aiLineEditPopup.style.display = "none";
+      showAILineEditInput();
+    });
+    aiLineEditPopup.innerHTML = ""; // Clear any existing content
+    aiLineEditPopup.appendChild(editButton);
+  }
+
+  // Detailed popup styling
+  aiLineEditPopup.style.cssText = `
+    position: absolute;
+    left: ${endColumn + 75}px;
+    top: ${startPosition}px;
+    display: block !important;
+    background-color: transparent;
+    border: none;
+    padding: 0;
+    z-index: 1000;
+    display: none;
+  `;
+
+  console.log("Popup styles set:", aiLineEditPopup.style.cssText);
+
+  // Try multiple methods to ensure visibility
+  try {
+    // Method 1: Append to body
+    document.body.appendChild(aiLineEditPopup);
+
+    // Method 2: Append to editor container
+    editorContainer.appendChild(aiLineEditPopup);
+
+    // Force reflow
+    aiLineEditPopup.offsetHeight;
+
+    console.log("Popup appended to DOM");
+  } catch (error) {
+    console.error("Error appending popup:", error);
+  }
+
+  // Additional visibility check
+  setTimeout(() => {
+    console.log("Popup after timeout:", {
+      display: aiLineEditPopup.style.display,
+      visibility: aiLineEditPopup.style.visibility,
+      opacity: aiLineEditPopup.style.opacity,
+    });
+  }, 100);
+
+  document.addEventListener("mousedown", function (event) {
+    if (
+      aiLineEditPopup &&
+      aiLineEditPopup.style.display === "block" &&
+      !aiLineEditPopup.contains(event.target)
+    ) {
+      // Check if the click is not on the popup or its children
+      aiLineEditPopup.style.display = "none";
+    }
+  });
+}
+
+function showAILineEditInput() {
+  if (!aiLineEditInput) {
+    // Create container for input and buttons
+    aiLineEditInput = document.createElement("div");
+    aiLineEditInput.id = "ai-line-edit-input-container";
+    aiLineEditInput.style.cssText = `
+      position: absolute;
+      display: flex;
+      align-items: center;
+      background-color: white;
+      border: none;
+      border-radius: 0px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      outline: none;
+      z-index: 1000;
+      padding: 5px;
+    `;
+
+    // Create input field
+    const inputField = document.createElement("input");
+    inputField.id = "ai-line-edit-input";
+    inputField.placeholder = "Ask AI about this code...";
+    inputField.style.cssText = `
+      flex-grow: 1;
+      width: 300px;
+      padding: 5px;
+      margin-right: 10px;
+      border: none;
+      border-radius: 0px;
+      outline: 1px solid rgba(0,0,0,0.1)
+    `;
+
+    // Create submit button
+    const submitButton = document.createElement("button");
+    submitButton.textContent = "Submit";
+    submitButton.style.cssText = `
+      background-color: #e0e0e0;
+      color: #333;
+      border: none;
+      padding: 5px 10px;
+      margin-right: 5px;
+      border-radius: 3px;
+      cursor: pointer;
+    `;
+
+    // Create close button
+    const closeButton = document.createElement("button");
+    closeButton.textContent = "X";
+    closeButton.style.cssText = `
+      background-color: #e0e0e0;
+      color: #333;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 3px;
+      cursor: pointer;
+    `;
+
+    // Hover effects
+    submitButton.addEventListener("mouseenter", () => {
+      submitButton.style.backgroundColor = "#d0d0d0";
+    });
+    submitButton.addEventListener("mouseleave", () => {
+      submitButton.style.backgroundColor = "#e0e0e0";
+    });
+
+    closeButton.addEventListener("mouseenter", () => {
+      closeButton.style.backgroundColor = "#d0d0d0";
+    });
+    closeButton.addEventListener("mouseleave", () => {
+      closeButton.style.backgroundColor = "#e0e0e0";
+    });
+
+    // Submit button event listener
+    submitButton.addEventListener("click", () => {
+      const query = inputField.value.trim();
+      if (query) {
+        // Send query to side-chat endpoint with code context
+        sendAILineEditQuery(query, currentHighlightedLines);
+
+        // Reset input and hide
+        inputField.value = "";
+        // Close the input
+        aiLineEditInput.style.display = "none";
+      }
+    });
+
+    // Close button event listener
+    closeButton.addEventListener("click", () => {
+      // Reset input and hide
+      inputField.value = "";
+      aiLineEditInput.style.display = "none";
+    });
+
+    // Close the input when clicked outside
+    document.addEventListener("mousedown", function (event) {
+      if (
+        aiLineEditInput &&
+        aiLineEditInput.style.display === "flex" &&
+        !aiLineEditInput.contains(event.target)
+      ) {
+        // Reset input to empty
+        inputField.value = "";
+        // Check if the click is not on the input or its children
+        aiLineEditInput.style.display = "none";
+      }
+    });
+
+    // Append elements to container
+    aiLineEditInput.appendChild(inputField);
+    aiLineEditInput.appendChild(submitButton);
+    aiLineEditInput.appendChild(closeButton);
+
+    // Add enter key support
+    inputField.addEventListener("keypress", (event) => {
+      if (event.key === "Enter") {
+        submitButton.click();
+      }
+    });
+
+    document.body.appendChild(aiLineEditInput);
+  }
+
+  // Position input relative to the popup
+  const popupLeft = parseInt(aiLineEditPopup.style.left);
+  const popupTop = parseInt(aiLineEditPopup.style.top);
+
+  // Position the input slightly to the right and below the popup
+  aiLineEditInput.style.left = `${popupLeft - 100}px`;
+  aiLineEditInput.style.top = `${popupTop + 40}px`;
+  aiLineEditInput.style.display = "flex";
+
+  // Focus on the input field
+  const inputField = aiLineEditInput.querySelector("input");
+  inputField.focus();
+}
+
+function sendAILineEditQuery(query, codeContext) {
+  // Add user's message to the chat
+  addMessage("Me", `${query}:\n\n\n${codeContext}`);
+
+  // Prepare the message payload
+  const messagePayload = {
+    sender: "User",
+    message: query,
+    fileContent: codeContext,
+    context: {
+      type: "line_edit",
+      codeSnippet: codeContext,
+    },
+  };
+
+  // Add thinking message with a unique ID
+  const thinkingId = "thinking-" + Date.now();
+  addMessage("Judge0", "", thinkingId, true); // Pass true for isThinking
+
+  // Send message to side-chat endpoint
+  fetch("http://localhost:3000/api/side-chat", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(messagePayload),
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+      return response.json();
+    })
+    .then((data) => {
+      // Remove thinking message
+      const thinkingMessage = document.getElementById(thinkingId);
+      if (thinkingMessage) {
+        thinkingMessage.remove();
+      }
+
+      // Extract the AI's response and add it
+      const aiResponse = data.choices[0].message.content;
+      addMessage("Judge0", aiResponse);
+    })
+    .catch((error) => {
+      // Remove thinking message
+      const thinkingMessage = document.getElementById(thinkingId);
+      if (thinkingMessage) {
+        thinkingMessage.remove();
+      }
+
+      console.error("Error:", error);
+      addMessage(
+        "Judge0",
+        "Sorry, I encountered an error processing your message."
+      );
+    });
 }
