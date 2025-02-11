@@ -755,7 +755,7 @@ document.addEventListener("DOMContentLoaded", async function () {
       // Create input area
       const inputContainer = document.createElement("div");
       inputContainer.style.cssText =
-        "display:flex; padding:10px; padding-bottom:30px; background-color:#e0e0e0;";
+        "display:flex; padding:10px; padding-bottom:30px; background-color:#e0e0e0; ";
 
       const inputField = document.createElement("input");
       inputField.id = "golden-chatbot-input";
@@ -970,11 +970,11 @@ document.addEventListener("DOMContentLoaded", async function () {
       }
     }
   };
-  // Initialize AI Line Edit Feature
-  createAILineEditPopup();
+  // Initialize AI Line Chat Feature
+  createAILineChatPopup();
 
   // Add event listener for text selection
-  document.addEventListener("mouseup", showAILineEditPopup);
+  document.addEventListener("mouseup", showAILineChatPopup);
 });
 
 // Default source code that appears in the IDE
@@ -1049,16 +1049,16 @@ function getLanguageForExtension(extension) {
   return EXTENSIONS_TABLE[extension] || { flavor: CE, language_id: 43 }; // Plain Text (https://ce.judge0.com/languages/43)
 }
 
-// AI Line Editing Feature Variables
-let aiLineEditPopup = null;
-let aiLineEditInput = null;
+// AI Line Chatting Feature Variables
+let aiLineChatPopup = null;
+let aiLineChatInput = null;
 let currentHighlightedLines = null;
 
-function createAILineEditPopup() {
+function createAILineChatPopup() {
   // Create popup container
-  aiLineEditPopup = document.createElement("div");
-  aiLineEditPopup.id = "ai-line-edit-popup";
-  aiLineEditPopup.style.cssText = `
+  aiLineChatPopup = document.createElement("div");
+  aiLineChatPopup.id = "ai-line-chat-popup";
+  aiLineChatPopup.style.cssText = `
   position: absolute;
   background-color: white;
   border: none;
@@ -1069,11 +1069,11 @@ function createAILineEditPopup() {
   height: fit-content; 
 `;
 
-  // Create "Edit" button
-  const editButton = document.createElement("button");
-  editButton.textContent = "Edit";
-  editButton.style.cssText = `
-  background-color: #4CAF50; 
+  // Create "Chat" button
+  const chatButton = document.createElement("button");
+  chatButton.textContent = "Chat";
+  chatButton.style.cssText = `
+  background-color: #008080; 
   color: white;
   border: none;
   padding: 3px 6px;
@@ -1083,17 +1083,17 @@ function createAILineEditPopup() {
   display: block; 
 `;
 
-  editButton.addEventListener("click", () => {
-    aiLineEditPopup.style.display = "none";
-    showAILineEditInput();
+  chatButton.addEventListener("click", () => {
+    aiLineChatPopup.style.display = "none";
+    showAILineChatInput();
   });
 
-  aiLineEditPopup.appendChild(editButton);
-  document.body.appendChild(aiLineEditPopup);
+  aiLineChatPopup.appendChild(chatButton);
+  document.body.appendChild(aiLineChatPopup);
 }
 
-function showAILineEditPopup(event) {
-  console.log("showAILineEditPopup called");
+function showAILineChatPopup(event) {
+  console.log("showAILineChatPopup called");
 
   // Target Monaco Editor container
   const editorContainer = document.querySelector(".monaco-editor.focused");
@@ -1102,8 +1102,6 @@ function showAILineEditPopup(event) {
     console.error("Monaco Editor container not found");
     return;
   }
-
-  console.log("Editor Container found:", editorContainer);
 
   // Get the Monaco Editor instance
   const editor = window.monaco.editor
@@ -1115,8 +1113,6 @@ function showAILineEditPopup(event) {
     return;
   }
 
-  console.log("Monaco Editor instance found:", editor);
-
   // Get the current selection
   const selection = editor.getSelection();
   const selectedText = editor.getModel().getValueInRange(selection);
@@ -1126,40 +1122,52 @@ function showAILineEditPopup(event) {
     return;
   }
 
-  console.log("Selection details:", {
-    selectedText,
-    startLineNumber: selection.startLineNumber,
-    startColumn: selection.startColumn,
-    endLineNumber: selection.endLineNumber,
-    endColumn: selection.endColumn,
-  });
-
   currentHighlightedLines = selectedText;
 
-  // Get the position of the selection
-  const startPosition = editor.getTopForLineNumber(selection.startLineNumber);
-  const endColumn = editor.getOffsetForColumn(
-    selection.endLineNumber,
-    selection.endColumn
-  );
+  // Get the viewport information
+  const scrollTop = editor.getScrollTop();
+  const layoutInfo = editor.getLayoutInfo();
 
-  console.log("Positioning details:", {
-    startPosition,
-    endColumn,
+  // Get coordinates for the selection
+  const selectionStartCoords = editor.getScrolledVisiblePosition({
+    lineNumber: selection.startLineNumber,
+    column: selection.startColumn,
   });
 
-  // Ensure popup is created with the edit button
-  if (!aiLineEditPopup) {
-    console.log("Creating AI Line Edit Popup");
-    createAILineEditPopup();
+  const selectionEndCoords = editor.getScrolledVisiblePosition({
+    lineNumber: selection.endLineNumber,
+    column: selection.endColumn,
+  });
+
+  if (!selectionStartCoords || !selectionEndCoords) {
+    console.error("Could not get selection coordinates");
+    return;
   }
 
-  // Ensure the edit button is present
-  if (!aiLineEditPopup.querySelector("button")) {
-    console.log("Creating Edit Button");
-    const editButton = document.createElement("button");
-    editButton.textContent = "Edit";
-    editButton.style.cssText = `
+  // Calculate the position of the selection relative to the viewport
+  const startPosition = editor.getTopForLineNumber(selection.startLineNumber);
+  const adjustedTop = startPosition - scrollTop;
+
+  // Check if the selection is within the viewport
+  const isInViewport = adjustedTop >= 0 && adjustedTop <= layoutInfo.height;
+
+  if (!isInViewport) {
+    console.log("Selection not in viewport");
+    return;
+  }
+
+  // Ensure popup is created with the chat button
+  if (!aiLineChatPopup) {
+    console.log("Creating AI Line Chat Popup");
+    createAILineChatPopup();
+  }
+
+  // Ensure the chat button is present
+  if (!aiLineChatPopup.querySelector("button")) {
+    console.log("Creating Chat Button");
+    const chatButton = document.createElement("button");
+    chatButton.textContent = "Chat";
+    chatButton.style.cssText = `
       background-color: #4CAF50;
       color: white;
       border: none;
@@ -1167,73 +1175,148 @@ function showAILineEditPopup(event) {
       border-radius: 3px;
       cursor: pointer;
       display: block;
+      font-size: 12px;
+      line-height: 1.5;
+      white-space: nowrap;
     `;
-    editButton.addEventListener("click", () => {
-      aiLineEditPopup.style.display = "none";
-      showAILineEditInput();
+    chatButton.addEventListener("click", () => {
+      aiLineChatPopup.style.display = "none";
+      showAILineChatInput();
     });
-    aiLineEditPopup.innerHTML = ""; // Clear any existing content
-    aiLineEditPopup.appendChild(editButton);
+    aiLineChatPopup.innerHTML = ""; // Clear any existing content
+    aiLineChatPopup.appendChild(chatButton);
   }
 
-  // Detailed popup styling
-  aiLineEditPopup.style.cssText = `
+  // Position the popup after the selection end with a margin
+  const MARGIN = 10;
+
+  // Calculate the rightmost position of the selection
+  const selectionRight = Math.max(
+    selectionStartCoords.left,
+    selectionEndCoords.left
+  );
+
+  // Position the popup after the selection
+  const popupLeft = selectionRight + MARGIN;
+  const popupTop = selectionEndCoords.top;
+
+  // Ensure the popup doesn't go beyond the editor's right edge
+  const maxLeft = layoutInfo.width - aiLineChatPopup.offsetWidth - MARGIN;
+  const finalLeft = Math.min(popupLeft, maxLeft);
+
+  // Detailed popup styling with position adjustments
+  aiLineChatPopup.style.cssText = `
     position: absolute;
-    left: ${endColumn + 75}px;
-    top: ${startPosition}px;
+    left: ${finalLeft}px;
+    top: ${popupTop}px;
     display: block !important;
     background-color: transparent;
     border: none;
-    padding: 0;
+    padding: 5px;
     z-index: 1000;
-    display: none;
+    pointer-events: auto;
   `;
 
-  console.log("Popup styles set:", aiLineEditPopup.style.cssText);
+  // Append to editor container for proper positioning
+  editorContainer.appendChild(aiLineChatPopup);
 
-  // Try multiple methods to ensure visibility
-  try {
-    // Method 1: Append to body
-    document.body.appendChild(aiLineEditPopup);
+  // Store the scroll listener reference
+  let scrollListener = null;
 
-    // Method 2: Append to editor container
-    editorContainer.appendChild(aiLineEditPopup);
-
-    // Force reflow
-    aiLineEditPopup.offsetHeight;
-
-    console.log("Popup appended to DOM");
-  } catch (error) {
-    console.error("Error appending popup:", error);
-  }
-
-  // Additional visibility check
-  setTimeout(() => {
-    console.log("Popup after timeout:", {
-      display: aiLineEditPopup.style.display,
-      visibility: aiLineEditPopup.style.visibility,
-      opacity: aiLineEditPopup.style.opacity,
+  // Add scroll listener to update popup position
+  const scrollHandler = () => {
+    const newScrollTop = editor.getScrollTop();
+    const newSelectionEndCoords = editor.getScrolledVisiblePosition({
+      lineNumber: selection.endLineNumber,
+      column: selection.endColumn,
     });
-  }, 100);
 
-  document.addEventListener("mousedown", function (event) {
-    if (
-      aiLineEditPopup &&
-      aiLineEditPopup.style.display === "block" &&
-      !aiLineEditPopup.contains(event.target)
-    ) {
-      // Check if the click is not on the popup or its children
-      aiLineEditPopup.style.display = "none";
+    if (!newSelectionEndCoords) {
+      aiLineChatPopup.style.display = "none";
+      return;
     }
+
+    const newAdjustedTop = startPosition - newScrollTop;
+
+    // Hide popup if selection scrolls out of view
+    if (newAdjustedTop < 0 || newAdjustedTop > layoutInfo.height) {
+      aiLineChatPopup.style.display = "none";
+    } else {
+      aiLineChatPopup.style.display = "block";
+      aiLineChatPopup.style.top = `${newSelectionEndCoords.top}px`;
+    }
+  };
+
+  // Add scroll listener and store the reference
+  scrollListener = editor.onDidScrollChange(scrollHandler);
+
+  // Handle click outside popup
+  const clickOutsideHandler = function (event) {
+    if (
+      aiLineChatPopup &&
+      aiLineChatPopup.style.display === "block" &&
+      !aiLineChatPopup.contains(event.target)
+    ) {
+      aiLineChatPopup.style.display = "none";
+      // Only dispose of the scroll listener
+      if (scrollListener) {
+        scrollListener.dispose();
+      }
+      // Remove this click handler
+      document.removeEventListener("mousedown", clickOutsideHandler);
+    }
+  };
+
+  document.addEventListener("mousedown", clickOutsideHandler);
+
+  // Add window resize handler
+  const resizeHandler = () => {
+    if (aiLineChatPopup.style.display === "block") {
+      const newLayoutInfo = editor.getLayoutInfo();
+      const newMaxLeft =
+        newLayoutInfo.width - aiLineChatPopup.offsetWidth - MARGIN;
+      const newSelectionEndCoords = editor.getScrolledVisiblePosition({
+        lineNumber: selection.endLineNumber,
+        column: selection.endColumn,
+      });
+
+      if (newSelectionEndCoords) {
+        const newSelectionRight = Math.max(
+          selectionStartCoords.left,
+          newSelectionEndCoords.left
+        );
+        const newPopupLeft = Math.min(newSelectionRight + MARGIN, newMaxLeft);
+        aiLineChatPopup.style.left = `${newPopupLeft}px`;
+        aiLineChatPopup.style.top = `${newSelectionEndCoords.top}px`;
+      }
+    }
+  };
+
+  window.addEventListener("resize", resizeHandler);
+
+  // Remove resize handler when popup is hidden
+  const popupObserver = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if (
+        mutation.type === "attributes" &&
+        mutation.attributeName === "style" &&
+        aiLineChatPopup.style.display === "none"
+      ) {
+        window.removeEventListener("resize", resizeHandler);
+        popupObserver.disconnect();
+      }
+    });
   });
+
+  popupObserver.observe(aiLineChatPopup, { attributes: true });
 }
 
-function showAILineEditInput() {
-  if (!aiLineEditInput) {
+function showAILineChatInput() {
+  if (!aiLineChatInput) {
     // Create container for input and buttons
-    aiLineEditInput = document.createElement("div");
-    aiLineEditInput.id = "ai-line-edit-input-container";
-    aiLineEditInput.style.cssText = `
+    aiLineChatInput = document.createElement("div");
+    aiLineChatInput.id = "ai-line-chat-input-container";
+    aiLineChatInput.style.cssText = `
       position: absolute;
       display: flex;
       align-items: center;
@@ -1248,7 +1331,7 @@ function showAILineEditInput() {
 
     // Create input field
     const inputField = document.createElement("input");
-    inputField.id = "ai-line-edit-input";
+    inputField.id = "ai-line-chat-input";
     inputField.placeholder = "Ask AI about this code...";
     inputField.style.cssText = `
       flex-grow: 1;
@@ -1305,12 +1388,12 @@ function showAILineEditInput() {
       const query = inputField.value.trim();
       if (query) {
         // Send query to side-chat endpoint with code context
-        sendAILineEditQuery(query, currentHighlightedLines);
+        sendAILineChatQuery(query, currentHighlightedLines);
 
         // Reset input and hide
         inputField.value = "";
         // Close the input
-        aiLineEditInput.style.display = "none";
+        aiLineChatInput.style.display = "none";
       }
     });
 
@@ -1318,27 +1401,27 @@ function showAILineEditInput() {
     closeButton.addEventListener("click", () => {
       // Reset input and hide
       inputField.value = "";
-      aiLineEditInput.style.display = "none";
+      aiLineChatInput.style.display = "none";
     });
 
     // Close the input when clicked outside
     document.addEventListener("mousedown", function (event) {
       if (
-        aiLineEditInput &&
-        aiLineEditInput.style.display === "flex" &&
-        !aiLineEditInput.contains(event.target)
+        aiLineChatInput &&
+        aiLineChatInput.style.display === "flex" &&
+        !aiLineChatInput.contains(event.target)
       ) {
         // Reset input to empty
         inputField.value = "";
         // Check if the click is not on the input or its children
-        aiLineEditInput.style.display = "none";
+        aiLineChatInput.style.display = "none";
       }
     });
 
     // Append elements to container
-    aiLineEditInput.appendChild(inputField);
-    aiLineEditInput.appendChild(submitButton);
-    aiLineEditInput.appendChild(closeButton);
+    aiLineChatInput.appendChild(inputField);
+    aiLineChatInput.appendChild(submitButton);
+    aiLineChatInput.appendChild(closeButton);
 
     // Add enter key support
     inputField.addEventListener("keypress", (event) => {
@@ -1347,24 +1430,24 @@ function showAILineEditInput() {
       }
     });
 
-    document.body.appendChild(aiLineEditInput);
+    document.body.appendChild(aiLineChatInput);
   }
 
   // Position input relative to the popup
-  const popupLeft = parseInt(aiLineEditPopup.style.left);
-  const popupTop = parseInt(aiLineEditPopup.style.top);
+  const popupLeft = parseInt(aiLineChatPopup.style.left);
+  const popupTop = parseInt(aiLineChatPopup.style.top);
 
   // Position the input slightly to the right and below the popup
-  aiLineEditInput.style.left = `${popupLeft - 100}px`;
-  aiLineEditInput.style.top = `${popupTop + 40}px`;
-  aiLineEditInput.style.display = "flex";
+  aiLineChatInput.style.left = `${popupLeft - 100}px`;
+  aiLineChatInput.style.top = `${popupTop + 40}px`;
+  aiLineChatInput.style.display = "flex";
 
   // Focus on the input field
-  const inputField = aiLineEditInput.querySelector("input");
+  const inputField = aiLineChatInput.querySelector("input");
   inputField.focus();
 }
 
-function sendAILineEditQuery(query, codeContext) {
+function sendAILineChatQuery(query, codeContext) {
   // Add user's message to the chat
   addMessage("Me", `${query}:\n\n\n${codeContext}`);
 
@@ -1374,7 +1457,7 @@ function sendAILineEditQuery(query, codeContext) {
     message: query,
     fileContent: codeContext,
     context: {
-      type: "line_edit",
+      type: "line_chat",
       codeSnippet: codeContext,
     },
   };
