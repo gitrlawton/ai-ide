@@ -1,4 +1,5 @@
 import { IS_PUTER } from "./puter.js";
+import { AIChatHistory } from "./ai.js";
 
 const API_KEY = ""; // Get yours at https://platform.sulu.sh/apis/judge0
 
@@ -28,9 +29,6 @@ UNAUTHENTICATED_BASE_URL[EXTRA_CE] = UNAUTHENTICATED_EXTRA_CE_BASE_URL;
 const INITIAL_WAIT_TIME_MS = 0;
 const WAIT_TIME_FUNCTION = (i) => 100;
 const MAX_PROBE_REQUESTS = 50;
-
-// Global variable to store selected LLM
-let selectedLLM = ""; // Default
 
 var fontSize = 13;
 
@@ -550,117 +548,14 @@ function refreshLayoutSize() {
   layout.updateSize();
 }
 
-// Function to handle LLM selection
-function handleLLMSelection() {
-  // Use Semantic UI dropdown method for full initialization
-  $("#judge0-llm-dropdown").dropdown({
-    onChange: function (value, text, $selectedItem) {
-      if (value) {
-        selectedLLM = value;
-        console.log(`Selected LLM: ${selectedLLM}`);
-      }
-    },
-  });
-}
-
-// Call the handleLLMSelection function during initialization
-document.addEventListener("DOMContentLoaded", function () {
-  handleLLMSelection();
-});
-
-// Define messagesArea
-const messagesArea = document.createElement("div");
-messagesArea.id = "golden-chatbot-messages";
-messagesArea.style.cssText =
-  "height:100%; overflow-y:auto; display:flex; flex-direction:column;";
-
-// Define addMessage function
-function addMessage(sender, message, messageId = null, isThinking = false) {
-  console.log(
-    `Attempting to add message - Sender: ${sender}, Message: ${message}`
-  );
-
-  // Ensure messagesArea is set
-  if (!messagesArea) {
-    messagesArea = document.getElementById("messages-area");
-  }
-
-  // If messagesArea still not found, log error and return
-  if (!messagesArea) {
-    console.error("Messages area not found");
-    return;
-  }
-
-  // Create message element
-  const messageWrapper = document.createElement("div");
-  if (messageId) {
-    messageWrapper.id = messageId;
-  }
-  messageWrapper.style.cssText =
-    "margin-bottom:10px; display:flex; flex-direction:column;";
-
-  const senderElement = document.createElement("strong");
-  senderElement.style.color = sender === "Me" ? "#007bff" : "#6c757d";
-  senderElement.textContent = `${sender}:`;
-
-  const messageElement = document.createElement("div");
-  messageElement.style.cssText = `
-      background-color: ${sender === "Me" ? "#e6f2ff" : "#f0f0f0"};
-      padding: 8px;
-      border-radius: 8px;
-      max-width: 90%;
-      word-wrap: break-word;
-      white-space: pre-wrap;
-  `;
-
-  if (isThinking) {
-    // Create thinking animation elements
-    messageElement.textContent = "Thinking";
-    const dots = document.createElement("span");
-    dots.textContent = "...";
-    dots.style.cssText = `
-          display: inline-block;
-          animation: blink 1.5s infinite;
-          width: 20px;
-          text-align: left;
-      `;
-    messageElement.appendChild(dots);
-
-    // Add animation style if it doesn't exist
-    if (!document.getElementById("blinkAnimation")) {
-      const style = document.createElement("style");
-      style.id = "blinkAnimation";
-      style.textContent = `
-              @keyframes blink {
-                  0% { opacity: 0.2; }
-                  20% { opacity: 1; }
-                  100% { opacity: 0.2; }
-              }
-          `;
-      document.head.appendChild(style);
-    }
-  } else {
-    messageElement.textContent = message;
-  }
-
-  messageWrapper.appendChild(senderElement);
-  messageWrapper.appendChild(messageElement);
-
-  // Add to messages area
-  messagesArea.appendChild(messageWrapper);
-
-  // Scroll to bottom
-  messagesArea.scrollTop = messagesArea.scrollHeight;
-
-  console.log("Message added. Total messages:", messagesArea.children.length);
-}
-
 window.addEventListener("resize", refreshLayoutSize);
 document.addEventListener("DOMContentLoaded", async function () {
   $("#select-language").dropdown();
   $("[data-content]").popup({
     lastResort: "left center",
   });
+  // Initialize Semantic UI dropdowns
+  $(".ui.dropdown").dropdown();
 
   refreshSiteContentHeight();
 
@@ -736,10 +631,17 @@ document.addEventListener("DOMContentLoaded", async function () {
     }
   });
 
-  require(["vs/editor/editor.main"], function (ignorable) {
+  function initMonaco() {
+    return new Promise((resolve) => {
+      require(["vs/editor/editor.main"], function () {
+        resolve();
+      });
+    });
+  }
+  (async function () {
+    await initMonaco();
     layout = new GoldenLayout(layoutConfig, $("#judge0-site-content"));
 
-    // Register source component
     layout.registerComponent("source", function (container, state) {
       sourceEditor = monaco.editor.create(container.getElement()[0], {
         automaticLayout: true,
@@ -752,137 +654,113 @@ document.addEventListener("DOMContentLoaded", async function () {
         },
       });
 
+      // Inline chat widget
+      sourceEditor.addAction({
+        id: "inlineChat",
+        label: "Chat about selection",
+        contextMenuGroupId: "navigation",
+        contextMenuOrder: 1.5,
+        run: function (ed) {
+          const selection = ed.getSelection();
+          const selectedText = ed.getModel().getValueInRange(selection);
+
+          if (selectedText) {
+            showInlineChatInput(ed, selection);
+          }
+        },
+      });
+
+      // Show chat button on text selection
+      sourceEditor.onDidChangeCursorSelection((e) => {
+        const selectedText = sourceEditor
+          .getModel()
+          .getValueInRange(e.selection);
+        if (selectedText) {
+          showChatButton(sourceEditor, e.selection);
+        } else {
+          hideInlineChatWidgets();
+        }
+      });
+
       sourceEditor.addCommand(
         monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
         run
       );
     });
 
-    // Register chatbot component
     layout.registerComponent("chatbot", function (container, state) {
-      // Create chatbot container
-      const chatbotContainer = document.createElement("div");
-      chatbotContainer.className = "chatbot-container";
-      chatbotContainer.style.cssText =
-        "height:100%; display:flex; flex-direction:column;";
+      // Create the container and its elements
+      const chatContainer = document.createElement("div");
+      chatContainer.id = "judge0-chat-container";
+      chatContainer.style.display = "flex";
 
-      // Create messages area
-      const messagesContainer = document.createElement("div");
-      messagesContainer.style.cssText =
-        "flex-grow:1; overflow-y:auto; padding:10px; background-color:#f0f0f0;";
+      // Create messages container
+      const messagesDiv = document.createElement("div");
+      messagesDiv.id = "judge0-chat-messages";
+      chatContainer.appendChild(messagesDiv);
 
-      messagesContainer.appendChild(messagesArea);
-
-      // Create input area
+      // Create input container
       const inputContainer = document.createElement("div");
-      inputContainer.style.cssText =
-        "display:flex; padding:10px; padding-bottom:30px; background-color:#e0e0e0; ";
+      inputContainer.id = "judge0-chat-input-container";
 
-      const inputField = document.createElement("input");
-      inputField.type = "text";
-      inputField.placeholder = "Ask me anything...";
-      inputField.style.cssText = "flex-grow:1; margin-right:10px;";
+      // Create form
+      const form = document.createElement("form");
+      form.id = "judge0-chat-form";
+      form.className = "ui form";
 
-      const sendButton = document.createElement("button");
-      sendButton.id = "golden-chatbot-send";
-      sendButton.textContent = "Send";
+      // Create input field
+      const inputField = document.createElement("div");
+      inputField.className = "field";
+      inputField.style.paddingBottom = "26px";
 
-      inputContainer.appendChild(inputField);
-      inputContainer.appendChild(sendButton);
+      const textarea = document.createElement("textarea");
+      textarea.id = "judge0-chat-user-input";
+      textarea.rows = 2;
 
-      // Assemble the chatbot container
-      chatbotContainer.appendChild(messagesContainer);
-      chatbotContainer.appendChild(inputContainer);
+      textarea.placeholder = "Ask me anything about your code...";
 
-      // Add to Golden Layout container
-      container.getElement()[0].appendChild(chatbotContainer);
+      // Create LLM dropdown
+      const dropdownContainer = document.createElement("div");
+      dropdownContainer.className = "ui compact mini selection dropdown";
+      dropdownContainer.id = "judge0-llm-dropdown";
+      dropdownContainer.style.cssText = `
+        position: absolute;
+        bottom: 13px;
+        left: 10px;
+        font-size: 10px;
+        z-index: 1000;
+        opacity: 0.7;
+        transition: opacity 0.2s;
+      `;
+      dropdownContainer.innerHTML = `
+        <i class="dropdown icon"></i>
+        <div class="default text" style="font-size: 10px;">Select Model</div>
+        <div class="menu">
+          <div class="item" style="font-size: 10px;" data-value="google/gemini-2.0-flash-lite-preview-02-05:free">Gemini Flash Lite 2.0</div>
+          <div class="item" style="font-size: 10px;" data-value="google/gemini-2.0-flash-exp:free">Gemini Flash 2.0 (p)</div>
+          <div class="item" style="font-size: 10px;" data-value="google/gemini-2.0-flash-thinking-exp:free">Gemini 2.0 Flash Thinking</div>
+          <div class="item" style="font-size: 10px;" data-value="google/gemini-2.0-pro-exp-02-05:free">Gemini Pro 2.0</div>
+          <div class="item" style="font-size: 10px;" data-value="deepseek/deepseek-chat:free">DeepSeek V3 (p)</div>
+          <div class="item" style="font-size: 10px;" data-value="deepseek/deepseek-r1:free">DeepSeek R1</div>
+        </div>
+      `;
 
-      // Debugging log
-      console.log("Chatbot DOM elements:", {
-        container: !!chatbotContainer,
-        messagesArea: !!messagesArea,
-        inputField: !!inputField,
-        sendButton: !!sendButton,
+      // Assemble the DOM structure
+      inputField.appendChild(textarea);
+      form.appendChild(inputField);
+      inputContainer.appendChild(form);
+      inputContainer.appendChild(dropdownContainer);
+      chatContainer.appendChild(inputContainer);
+
+      // Append to the layout container
+      container.getElement()[0].appendChild(chatContainer);
+
+      // Now that the DOM is ready, initialize the chat
+      requestAnimationFrame(() => {
+        window.aiChat = new AIChatHistory(sourceEditor);
       });
-
-      // Send button click handler
-      sendButton.addEventListener("click", function () {
-        console.log("Send button clicked");
-        const message = inputField.value.trim();
-        console.log("Message value:", message);
-
-        if (message) {
-          // Get the current editor's content
-          const fileContent = sourceEditor.getValue();
-
-          // Add user message
-          addMessage("Me", message);
-
-          // Clear input
-          inputField.value = "";
-
-          // Add thinking message with a unique ID
-          const thinkingId = "thinking-" + Date.now();
-          addMessage("Judge0", "", thinkingId, true); // Pass true for isThinking
-
-          // Send message to OpenRouter API via the backend
-          fetch("http://localhost:3000/api/side-chat", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              message: message,
-              fileContent: fileContent,
-              llm: selectedLLM,
-            }),
-          })
-            .then((response) => {
-              if (!response.ok) {
-                throw new Error("Network response was not ok");
-              }
-              return response.json();
-            })
-            .then((data) => {
-              // Remove thinking message
-              const thinkingMessage = document.getElementById(thinkingId);
-              if (thinkingMessage) {
-                thinkingMessage.remove();
-              }
-
-              // Extract the AI's response and add it
-              const aiResponse = data.choices[0].message.content;
-              addMessage("Judge0", aiResponse);
-            })
-            .catch((error) => {
-              // Remove thinking message
-              const thinkingMessage = document.getElementById(thinkingId);
-              if (thinkingMessage) {
-                thinkingMessage.remove();
-              }
-
-              console.error("Error:", error);
-              addMessage(
-                "Judge0",
-                "Sorry, I encountered an error processing your message."
-              );
-            });
-        } else {
-          console.log("Empty message, not adding");
-        }
-      });
-
-      // Enter key handler
-      inputField.addEventListener("keypress", function (e) {
-        if (e.key === "Enter") {
-          sendButton.click();
-        }
-      });
-
-      console.log("Chatbot component fully initialized");
     });
 
-    // Register stdin component
     layout.registerComponent("stdin", function (container, state) {
       stdinEditor = monaco.editor.create(container.getElement()[0], {
         automaticLayout: true,
@@ -896,7 +774,6 @@ document.addEventListener("DOMContentLoaded", async function () {
       });
     });
 
-    // Register stdout component
     layout.registerComponent("stdout", function (container, state) {
       stdoutEditor = monaco.editor.create(container.getElement()[0], {
         automaticLayout: true,
@@ -917,7 +794,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     });
 
     layout.init();
-  });
+  })();
 
   let superKey = "⌘";
   if (!/(Mac|iPhone|iPod|iPad)/i.test(navigator.platform)) {
@@ -991,19 +868,132 @@ document.addEventListener("DOMContentLoaded", async function () {
       }
     }
   };
-  // Initialize AI Line Chat Feature
-  createAILineChatPopup();
-
-  // Add event listener for text selection
-  document.addEventListener("mouseup", showAILineChatPopup);
 });
 
-// Default source code that appears in the IDE
 const DEFAULT_SOURCE =
-  "// Default source code. Open the file menu to open a file.";
+  "\
+#include <algorithm>\n\
+#include <cstdint>\n\
+#include <iostream>\n\
+#include <limits>\n\
+#include <set>\n\
+#include <utility>\n\
+#include <vector>\n\
+\n\
+using Vertex    = std::uint16_t;\n\
+using Cost      = std::uint16_t;\n\
+using Edge      = std::pair< Vertex, Cost >;\n\
+using Graph     = std::vector< std::vector< Edge > >;\n\
+using CostTable = std::vector< std::uint64_t >;\n\
+\n\
+constexpr auto kInfiniteCost{ std::numeric_limits< CostTable::value_type >::max() };\n\
+\n\
+auto dijkstra( Vertex const start, Vertex const end, Graph const & graph, CostTable & costTable )\n\
+{\n\
+    std::fill( costTable.begin(), costTable.end(), kInfiniteCost );\n\
+    costTable[ start ] = 0;\n\
+\n\
+    std::set< std::pair< CostTable::value_type, Vertex > > minHeap;\n\
+    minHeap.emplace( 0, start );\n\
+\n\
+    while ( !minHeap.empty() )\n\
+    {\n\
+        auto const vertexCost{ minHeap.begin()->first  };\n\
+        auto const vertex    { minHeap.begin()->second };\n\
+\n\
+        minHeap.erase( minHeap.begin() );\n\
+\n\
+        if ( vertex == end )\n\
+        {\n\
+            break;\n\
+        }\n\
+\n\
+        for ( auto const & neighbourEdge : graph[ vertex ] )\n\
+        {\n\
+            auto const & neighbour{ neighbourEdge.first };\n\
+            auto const & cost{ neighbourEdge.second };\n\
+\n\
+            if ( costTable[ neighbour ] > vertexCost + cost )\n\
+            {\n\
+                minHeap.erase( { costTable[ neighbour ], neighbour } );\n\
+                costTable[ neighbour ] = vertexCost + cost;\n\
+                minHeap.emplace( costTable[ neighbour ], neighbour );\n\
+            }\n\
+        }\n\
+    }\n\
+\n\
+    return costTable[ end ];\n\
+}\n\
+\n\
+int main()\n\
+{\n\
+    constexpr std::uint16_t maxVertices{ 10000 };\n\
+\n\
+    Graph     graph    ( maxVertices );\n\
+    CostTable costTable( maxVertices );\n\
+\n\
+    std::uint16_t testCases;\n\
+    std::cin >> testCases;\n\
+\n\
+    while ( testCases-- > 0 )\n\
+    {\n\
+        for ( auto i{ 0 }; i < maxVertices; ++i )\n\
+        {\n\
+            graph[ i ].clear();\n\
+        }\n\
+\n\
+        std::uint16_t numberOfVertices;\n\
+        std::uint16_t numberOfEdges;\n\
+\n\
+        std::cin >> numberOfVertices >> numberOfEdges;\n\
+\n\
+        for ( auto i{ 0 }; i < numberOfEdges; ++i )\n\
+        {\n\
+            Vertex from;\n\
+            Vertex to;\n\
+            Cost   cost;\n\
+\n\
+            std::cin >> from >> to >> cost;\n\
+            graph[ from ].emplace_back( to, cost );\n\
+        }\n\
+\n\
+        Vertex start;\n\
+        Vertex end;\n\
+\n\
+        std::cin >> start >> end;\n\
+\n\
+        auto const result{ dijkstra( start, end, graph, costTable ) };\n\
+\n\
+        if ( result == kInfiniteCost )\n\
+        {\n\
+            std::cout << \"NO\\n\";\n\
+        }\n\
+        else\n\
+        {\n\
+            std::cout << result << '\\n';\n\
+        }\n\
+    }\n\
+\n\
+    return 0;\n\
+}\n\
+";
 
-// Default content in the STD Input window
-const DEFAULT_STDIN = "";
+const DEFAULT_STDIN =
+  "\
+3\n\
+3 2\n\
+1 2 5\n\
+2 3 7\n\
+1 3\n\
+3 3\n\
+1 2 4\n\
+1 3 7\n\
+2 3 1\n\
+1 3\n\
+3 1\n\
+1 2 4\n\
+1 3\n\
+";
 
 const DEFAULT_COMPILER_OPTIONS = "";
 const DEFAULT_CMD_ARGUMENTS = "";
@@ -1070,460 +1060,84 @@ function getLanguageForExtension(extension) {
   return EXTENSIONS_TABLE[extension] || { flavor: CE, language_id: 43 }; // Plain Text (https://ce.judge0.com/languages/43)
 }
 
-// AI Line Chatting Feature Variables
-let aiLineChatPopup = null;
-let aiLineChatInput = null;
-let currentHighlightedLines = null;
+// Inline chat specific functions
+function showChatButton(editor, selection) {
+  hideInlineChatWidgets();
 
-function createAILineChatPopup() {
-  // Create popup container
-  aiLineChatPopup = document.createElement("div");
-  aiLineChatPopup.id = "ai-line-chat-popup";
-  aiLineChatPopup.style.cssText = `
-  position: absolute;
-  background-color: white;
-  border: none;
-  padding: 0;
-  z-index: 1000;
-  display: none;
-  width: fit-content; 
-  height: fit-content; 
-`;
+  const chatButton = document.createElement("div");
+  chatButton.setAttribute("widgetId", "inlineChatButton");
+  chatButton.className = "inline-chat-button";
+  chatButton.innerHTML = "chat";
+  chatButton.onclick = () => showInlineChatInput(editor, selection);
 
-  // Create "Chat" button
-  const chatButton = document.createElement("button");
-  chatButton.textContent = "Chat";
-  chatButton.style.cssText = `
-  background-color: #008080; 
-  color: white;
-  border: none;
-  padding: 3px 6px;
-  border-radius: 3px;
-  cursor: pointer;
-  font-size: 0.8em;
-  display: block; 
-`;
-
-  chatButton.addEventListener("click", () => {
-    aiLineChatPopup.style.display = "none";
-    showAILineChatInput();
-  });
-
-  aiLineChatPopup.appendChild(chatButton);
-  document.body.appendChild(aiLineChatPopup);
-}
-
-function showAILineChatPopup(event) {
-  console.log("showAILineChatPopup called");
-
-  // Target Monaco Editor container
-  const editorContainer = document.querySelector(".monaco-editor.focused");
-
-  if (!editorContainer) {
-    console.error("Monaco Editor container not found");
-    return;
-  }
-
-  // Get the Monaco Editor instance
-  const editor = window.monaco.editor
-    .getEditors()
-    .find((ed) => ed.getDomNode() === editorContainer);
-
-  if (!editor) {
-    console.error("No active Monaco Editor found");
-    return;
-  }
-
-  // Get the current selection
-  const selection = editor.getSelection();
-  const selectedText = editor.getModel().getValueInRange(selection);
-
-  if (!selectedText) {
-    console.error("No text selected");
-    return;
-  }
-
-  currentHighlightedLines = selectedText;
-
-  // Get the viewport information
-  const scrollTop = editor.getScrollTop();
-  const layoutInfo = editor.getLayoutInfo();
-
-  // Get coordinates for the selection
-  const selectionStartCoords = editor.getScrolledVisiblePosition({
-    lineNumber: selection.startLineNumber,
-    column: selection.startColumn,
-  });
-
-  const selectionEndCoords = editor.getScrolledVisiblePosition({
-    lineNumber: selection.endLineNumber,
-    column: selection.endColumn,
-  });
-
-  if (!selectionStartCoords || !selectionEndCoords) {
-    console.error("Could not get selection coordinates");
-    return;
-  }
-
-  // Calculate the position of the selection relative to the viewport
-  const startPosition = editor.getTopForLineNumber(selection.startLineNumber);
-  const adjustedTop = startPosition - scrollTop;
-
-  // Check if the selection is within the viewport
-  const isInViewport = adjustedTop >= 0 && adjustedTop <= layoutInfo.height;
-
-  if (!isInViewport) {
-    console.log("Selection not in viewport");
-    return;
-  }
-
-  // Ensure popup is created with the chat button
-  if (!aiLineChatPopup) {
-    console.log("Creating AI Line Chat Popup");
-    createAILineChatPopup();
-  }
-
-  // Ensure the chat button is present
-  if (!aiLineChatPopup.querySelector("button")) {
-    console.log("Creating Chat Button");
-    const chatButton = document.createElement("button");
-    chatButton.textContent = "Chat";
-    chatButton.style.cssText = `
-      background-color: #4CAF50;
-      color: white;
-      border: none;
-      padding: 5px 10px;
-      border-radius: 3px;
-      cursor: pointer;
-      display: block;
-      font-size: 12px;
-      line-height: 1.5;
-      white-space: nowrap;
-    `;
-    chatButton.addEventListener("click", () => {
-      aiLineChatPopup.style.display = "none";
-      showAILineChatInput();
-    });
-    aiLineChatPopup.innerHTML = ""; // Clear any existing content
-    aiLineChatPopup.appendChild(chatButton);
-  }
-
-  // Position the popup after the selection end with a margin
-  const MARGIN = 10;
-
-  // Calculate the rightmost position of the selection
-  const selectionRight = Math.max(
-    selectionStartCoords.left,
-    selectionEndCoords.left
-  );
-
-  // Position the popup after the selection
-  const popupLeft = selectionRight + MARGIN;
-  const popupTop = selectionEndCoords.top;
-
-  // Ensure the popup doesn't go beyond the editor's right edge
-  const maxLeft = layoutInfo.width - aiLineChatPopup.offsetWidth - MARGIN;
-  const finalLeft = Math.min(popupLeft, maxLeft);
-
-  // Detailed popup styling with position adjustments
-  aiLineChatPopup.style.cssText = `
-    position: absolute;
-    left: ${finalLeft}px;
-    top: ${popupTop}px;
-    display: block !important;
-    background-color: transparent;
-    border: none;
-    padding: 5px;
-    z-index: 1000;
-    pointer-events: auto;
-  `;
-
-  // Append to editor container for proper positioning
-  editorContainer.appendChild(aiLineChatPopup);
-
-  // Store the scroll listener reference
-  let scrollListener = null;
-
-  // Add scroll listener to update popup position
-  const scrollHandler = () => {
-    const newScrollTop = editor.getScrollTop();
-    const newSelectionEndCoords = editor.getScrolledVisiblePosition({
-      lineNumber: selection.endLineNumber,
-      column: selection.endColumn,
-    });
-
-    if (!newSelectionEndCoords) {
-      aiLineChatPopup.style.display = "none";
-      return;
-    }
-
-    const newAdjustedTop = startPosition - newScrollTop;
-
-    // Hide popup if selection scrolls out of view
-    if (newAdjustedTop < 0 || newAdjustedTop > layoutInfo.height) {
-      aiLineChatPopup.style.display = "none";
-    } else {
-      aiLineChatPopup.style.display = "block";
-      aiLineChatPopup.style.top = `${newSelectionEndCoords.top}px`;
-    }
-  };
-
-  // Add scroll listener and store the reference
-  scrollListener = editor.onDidScrollChange(scrollHandler);
-
-  // Handle click outside popup
-  const clickOutsideHandler = function (event) {
-    if (
-      aiLineChatPopup &&
-      aiLineChatPopup.style.display === "block" &&
-      !aiLineChatPopup.contains(event.target)
-    ) {
-      aiLineChatPopup.style.display = "none";
-      // Only dispose of the scroll listener
-      if (scrollListener) {
-        scrollListener.dispose();
-      }
-      // Remove this click handler
-      document.removeEventListener("mousedown", clickOutsideHandler);
-    }
-  };
-
-  document.addEventListener("mousedown", clickOutsideHandler);
-
-  // Add window resize handler
-  const resizeHandler = () => {
-    if (aiLineChatPopup.style.display === "block") {
-      const newLayoutInfo = editor.getLayoutInfo();
-      const newMaxLeft =
-        newLayoutInfo.width - aiLineChatPopup.offsetWidth - MARGIN;
-      const newSelectionEndCoords = editor.getScrolledVisiblePosition({
+  editor.addContentWidget({
+    getId: () => "inlineChatButton",
+    getDomNode: () => chatButton,
+    getPosition: () => ({
+      position: {
         lineNumber: selection.endLineNumber,
-        column: selection.endColumn,
-      });
+        column: editor.getModel().getLineMaxColumn(selection.endLineNumber) + 1,
+      },
+      preference: [monaco.editor.ContentWidgetPositionPreference.RIGHT],
+    }),
+  });
+}
 
-      if (newSelectionEndCoords) {
-        const newSelectionRight = Math.max(
-          selectionStartCoords.left,
-          newSelectionEndCoords.left
-        );
-        const newPopupLeft = Math.min(newSelectionRight + MARGIN, newMaxLeft);
-        aiLineChatPopup.style.left = `${newPopupLeft}px`;
-        aiLineChatPopup.style.top = `${newSelectionEndCoords.top}px`;
-      }
-    }
-  };
+function showInlineChatInput(editor, selection) {
+  hideInlineChatWidgets();
 
-  window.addEventListener("resize", resizeHandler);
+  const container = document.createElement("div");
+  container.className = "inline-chat-input-container";
 
-  // Remove resize handler when popup is hidden
-  const popupObserver = new MutationObserver((mutations) => {
-    mutations.forEach((mutation) => {
-      if (
-        mutation.type === "attributes" &&
-        mutation.attributeName === "style" &&
-        aiLineChatPopup.style.display === "none"
-      ) {
-        window.removeEventListener("resize", resizeHandler);
-        popupObserver.disconnect();
-      }
-    });
+  const input = document.createElement("input");
+  input.className = "inline-chat-input";
+  input.placeholder = "Ask about this code.  Press Enter to submit.";
+
+  container.appendChild(input);
+
+  editor.addContentWidget({
+    getId: () => "inlineChatInput",
+    getDomNode: () => container,
+    getPosition: () => ({
+      position: {
+        lineNumber: selection.startLineNumber - 1,
+        column: 1,
+      },
+      preference: [monaco.editor.ContentWidgetPositionPreference.ABOVE],
+    }),
   });
 
-  popupObserver.observe(aiLineChatPopup, { attributes: true });
-}
+  // Use requestAnimationFrame to ensure DOM is ready
+  requestAnimationFrame(() => input.focus());
 
-function showAILineChatInput() {
-  if (!aiLineChatInput) {
-    // Create container for input and buttons
-    aiLineChatInput = document.createElement("div");
-    aiLineChatInput.id = "ai-line-chat-input-container";
-    aiLineChatInput.style.cssText = `
-      position: absolute;
-      display: flex;
-      align-items: center;
-      background-color: white;
-      border: none;
-      border-radius: 0px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-      outline: none;
-      z-index: 1000;
-      padding: 5px;
-    `;
+  input.onkeydown = async (e) => {
+    if (e.key === "Enter" && !e.isComposing) {
+      const selectedText = editor.getModel().getValueInRange(selection);
+      // Ensure each line of code is on its own line by splitting and joining
+      const formattedCode = selectedText.split("\n").join("\n");
+      const query = `${input.value}:\n\`\`\`\n${formattedCode}\n\`\`\``;
 
-    // Create input field
-    const inputField = document.createElement("input");
-    inputField.id = "ai-line-chat-input";
-    inputField.placeholder = "Ask AI about this code...";
-    inputField.style.cssText = `
-      flex-grow: 1;
-      width: 300px;
-      padding: 5px;
-      margin-right: 10px;
-      border: none;
-      border-radius: 0px;
-      outline: 1px solid rgba(0,0,0,0.1)
-    `;
+      // Use existing chat input and send mechanism
+      const chatInput = document.getElementById("judge0-chat-user-input");
+      chatInput.value = query;
+      window.aiChat.sendMessage();
 
-    // Create submit button
-    const submitButton = document.createElement("button");
-    submitButton.textContent = "Submit";
-    submitButton.style.cssText = `
-      background-color: #e0e0e0;
-      color: #333;
-      border: none;
-      padding: 5px 10px;
-      margin-right: 5px;
-      border-radius: 3px;
-      cursor: pointer;
-    `;
-
-    // Create close button
-    const closeButton = document.createElement("button");
-    closeButton.textContent = "X";
-    closeButton.style.cssText = `
-      background-color: #e0e0e0;
-      color: #333;
-      border: none;
-      padding: 5px 10px;
-      border-radius: 3px;
-      cursor: pointer;
-    `;
-
-    // Hover effects
-    submitButton.addEventListener("mouseenter", () => {
-      submitButton.style.backgroundColor = "#d0d0d0";
-    });
-    submitButton.addEventListener("mouseleave", () => {
-      submitButton.style.backgroundColor = "#e0e0e0";
-    });
-
-    closeButton.addEventListener("mouseenter", () => {
-      closeButton.style.backgroundColor = "#d0d0d0";
-    });
-    closeButton.addEventListener("mouseleave", () => {
-      closeButton.style.backgroundColor = "#e0e0e0";
-    });
-
-    // Submit button event listener
-    submitButton.addEventListener("click", () => {
-      const query = inputField.value.trim();
-      if (query) {
-        // Send query to side-chat endpoint with code context
-        sendAILineChatQuery(query, currentHighlightedLines);
-
-        // Reset input and hide
-        inputField.value = "";
-        // Close the input
-        aiLineChatInput.style.display = "none";
-      }
-    });
-
-    // Close button event listener
-    closeButton.addEventListener("click", () => {
-      // Reset input and hide
-      inputField.value = "";
-      aiLineChatInput.style.display = "none";
-    });
-
-    // Close the input when clicked outside
-    document.addEventListener("mousedown", function (event) {
-      if (
-        aiLineChatInput &&
-        aiLineChatInput.style.display === "flex" &&
-        !aiLineChatInput.contains(event.target)
-      ) {
-        // Reset input to empty
-        inputField.value = "";
-        // Check if the click is not on the input or its children
-        aiLineChatInput.style.display = "none";
-      }
-    });
-
-    // Append elements to container
-    aiLineChatInput.appendChild(inputField);
-    aiLineChatInput.appendChild(submitButton);
-    aiLineChatInput.appendChild(closeButton);
-
-    // Add enter key support
-    inputField.addEventListener("keypress", (event) => {
-      if (event.key === "Enter") {
-        submitButton.click();
-      }
-    });
-
-    document.body.appendChild(aiLineChatInput);
-  }
-
-  // Position input relative to the popup
-  const popupLeft = parseInt(aiLineChatPopup.style.left);
-  const popupTop = parseInt(aiLineChatPopup.style.top);
-
-  // Position the input slightly to the right and below the popup
-  aiLineChatInput.style.left = `${popupLeft - 100}px`;
-  aiLineChatInput.style.top = `${popupTop + 40}px`;
-  aiLineChatInput.style.display = "flex";
-
-  // Focus on the input field
-  const inputField = aiLineChatInput.querySelector("input");
-  inputField.focus();
-}
-
-function sendAILineChatQuery(query, codeContext) {
-  // Add user's message to the chat
-  addMessage("Me", `${query}:\n\n\n${codeContext}`);
-
-  // Prepare the message payload
-  const messagePayload = {
-    sender: "User",
-    message: query,
-    fileContent: codeContext,
-    context: {
-      type: "line_chat",
-      codeSnippet: codeContext,
-      llm: selectedLLM,
-    },
+      hideInlineChatWidgets();
+    }
   };
+}
 
-  // Add thinking message with a unique ID
-  const thinkingId = "thinking-" + Date.now();
-  addMessage("Judge0", "", thinkingId, true); // Pass true for isThinking
-
-  // Send message to side-chat endpoint
-  fetch("http://localhost:3000/api/side-chat", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(messagePayload),
-  })
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error("Network response was not ok");
-      }
-      return response.json();
-    })
-    .then((data) => {
-      // Remove thinking message
-      const thinkingMessage = document.getElementById(thinkingId);
-      if (thinkingMessage) {
-        thinkingMessage.remove();
-      }
-
-      // Extract the AI's response and add it
-      const aiResponse = data.choices[0].message.content;
-      addMessage("Judge0", aiResponse);
-    })
-    .catch((error) => {
-      // Remove thinking message
-      const thinkingMessage = document.getElementById(thinkingId);
-      if (thinkingMessage) {
-        thinkingMessage.remove();
-      }
-
-      console.error("Error:", error);
-      addMessage(
-        "Judge0",
-        "Sorry, I encountered an error processing your message."
-      );
-    });
+function hideInlineChatWidgets() {
+  ["inlineChatButton", "inlineChatInput"].forEach((id) => {
+    const widget = sourceEditor
+      .getContainerDomNode()
+      .querySelector(`[widgetId="${id}"]`);
+    if (widget) {
+      sourceEditor.removeContentWidget({
+        getId: () => id,
+        getDomNode: () => widget,
+        getPosition: () => null,
+      });
+    }
+  });
 }

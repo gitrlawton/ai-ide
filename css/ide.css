@@ -1,3 +1,4 @@
+/* Judge0 written */
 .judge0-file-menu {
   min-width: 15rem !important;
 }
@@ -29,4 +30,328 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* End of Judge0 written */
+
+/* Container Layout */
+#judge0-chat-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: #ffffff;
+  transition: background-color 0.3s ease;
+}
+
+#judge0-chat-container.inverted {
+  background-color: #1b1c1d;
+}
+
+/* Main Dropdown Styles */
+#judge0-llm-dropdown {
+  border: none !important;
+  background: transparent !important;
+  width: 148px !important;
+  opacity: 1 !important;
+}
+
+/* Main Dropdown Text */
+#judge0-llm-dropdown .text {
+  color: #666 !important;
+}
+
+#judge0-llm-dropdown .menu {
+  border: 1px solid rgb(196, 195, 195) !important;
+  /* box-shadow: none !important; */
+}
+
+/* Dropdown Items */
+#judge0-llm-dropdown .menu .item {
+  color: #2c2c2c !important;
+  background-color: #f8f9fa !important;
+  border: none !important;
+}
+
+#judge0-llm-dropdown .menu .item:hover {
+  color: #000000 !important;
+  background-color: #e9ecef !important;
+}
+
+#judge0-llm-dropdown .menu .selected.item {
+  color: #ffffff !important;
+  background-color: #0e4177 !important;
+}
+
+/* Main Dropdown Text Dark Theme */
+.inverted #judge0-llm-dropdown .text {
+  color: #999 !important;
+}
+
+.inverted #judge0-llm-dropdown .menu {
+  border: 1px solid #999 !important; /* Dark mode border */
+}
+
+/* Dropdown Items Dark Theme */
+.inverted #judge0-llm-dropdown .menu .item {
+  color: #e1e1e1 !important;
+  background-color: #1e1e1e !important;
+}
+
+.inverted #judge0-llm-dropdown .menu .item:hover {
+  color: #ffffff !important;
+  background-color: #2d2d2d !important;
+}
+
+.inverted #judge0-llm-dropdown .menu .selected.item {
+  color: #ffffff !important;
+  background-color: #0e4177 !important;
+}
+
+/* Messages Container */
+#judge0-chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  scrollbar-width: thin;
+  background-color: #ffffff;
+  transition: background-color 0.3s ease;
+}
+
+#judge0-chat-messages.inverted {
+  background-color: #1b1c1d;
+}
+
+/* Scrollbar Styles */
+#judge0-chat-messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+#judge0-chat-messages::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+#judge0-chat-messages::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 3px;
+}
+
+#judge0-chat-messages.inverted::-webkit-scrollbar-track {
+  background: #2d2d2d;
+}
+
+#judge0-chat-messages.inverted::-webkit-scrollbar-thumb {
+  background: #666;
+}
+
+/* Message Bubbles Base Styles */
+.ui.label {
+  margin: 0.5rem 0;
+  padding: 1rem;
+  max-width: 80%;
+  border-radius: 12px;
+  word-wrap: break-word;
+  white-space: normal;
+  line-height: 1.4;
+}
+
+/* User Message Styles */
+.judge0-user-message {
+  align-self: flex-end;
+  background-color: #0e4177fd !important;
+  color: white !important;
+  border: none !important;
+}
+
+/* AI Message Styles */
+.ui.label:not(.judge0-user-message):not(.red) {
+  align-self: flex-start;
+  background-color: #f0f0f0 !important;
+  color: #2c2c2c !important;
+  border: none !important;
+}
+
+/* Dark Theme Message Styles */
+.ui.label.inverted {
+  background-color: #363636 !important;
+  color: #e0e0e0 !important;
+}
+
+.ui.label:not(.judge0-user-message):not(.red).inverted {
+  background-color: #242424 !important;
+  color: #e0e0e0 !important;
+}
+
+/* Error Message Styles */
+.ui.red.label {
+  align-self: center;
+  background-color: #ff3b30 !important;
+  color: white !important;
+  border: none !important;
+}
+
+.ui.red.label.inverted {
+  background-color: #cc2e26 !important;
+}
+
+/* Input Container */
+#judge0-chat-input-container {
+  padding: 1rem;
+  border-top: 1px solid #e0e0e0;
+  background-color: #ffffff;
+  transition: all 0.3s ease;
+}
+
+#judge0-chat-input-container.inverted {
+  border-top-color: #444;
+  background-color: #1b1c1d;
+}
+
+/* Form Styles */
+#judge0-chat-form {
+  margin: 0;
+}
+
+/* Textarea Styles */
+#judge0-chat-user-input {
+  width: 100%;
+  resize: none;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 0.8rem;
+  font-family: inherit;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  transition: all 0.3s ease;
+  background-color: #ffffff;
+  color: #2c2c2c;
+}
+
+#judge0-chat-user-input:focus {
+  outline: none;
+  border-color: #868686;
+}
+
+/* Dark Theme Textarea */
+#judge0-chat-user-input.inverted {
+  background-color: #2d2d2d;
+  color: rgba(255, 255, 255, 0.9);
+  border-color: #444;
+}
+
+#judge0-chat-user-input.inverted:focus {
+  border-color: #858585;
+}
+
+/* Disabled State */
+#judge0-chat-user-input:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Code Block Styles within Messages */
+.ui.label pre {
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 0.5rem;
+  border-radius: 4px;
+  margin: 0.5rem 0;
+  overflow-x: auto;
+}
+
+.ui.label.inverted pre {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Inline chat styles */
+.inline-chat-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--vscode-editor-background);
+  border: 1px solid var(--vscode-editor-foreground);
+  border-radius: 4px;
+  padding: 2px 6px;
+  cursor: pointer;
+  opacity: 0.8;
+  margin-left: 8px;
+  font-size: 12px;
+}
+
+.inline-chat-button:hover {
+  opacity: 1;
+}
+
+.inline-chat-input-container {
+  width: 100%;
+  padding: 4px 8px;
+  margin: 8px 0;
+}
+
+.inline-chat-input {
+  width: 400px;
+  height: 28px;
+  background: var(--vscode-editor-background);
+  border: 1px solid #666;
+  border-radius: 4px;
+  padding: 4px 12px;
+  color: inherit;
+  font-size: 12px;
+  font-family: inherit;
+}
+
+.inline-chat-input:focus {
+  outline: none;
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+}
+
+/* Thinking Animation */
+.thinking-animation {
+  display: inline-block;
+}
+
+.thinking-animation .dot {
+  opacity: 0;
+  animation: thinking 1.4s infinite;
+  display: inline-block;
+}
+
+.thinking-animation .dot:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.thinking-animation .dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.thinking-animation .dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes thinking {
+  0% {
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* Mobile Responsive Styles */
+@media (max-width: 768px) {
+  .ui.label {
+    max-width: 90%;
+  }
+
+  #judge0-chat-input-container {
+    padding: 0.8rem;
+  }
+
+  #judge0-chat-user-input {
+    padding: 0.6rem;
+  }
 }

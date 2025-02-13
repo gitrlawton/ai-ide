@@ -5,6 +5,17 @@ import ls from "./local_storage.js";
 const theme = {
   SUPPORTED_THEMES: ["light", "dark", "system", "reverse-system"],
   DEFAULT_THEME: "system",
+
+  isLight() {
+    const current = this.get();
+    if (current === "system") {
+      return !window.matchMedia("(prefers-color-scheme: dark)").matches;
+    } else if (current === "reverse-system") {
+      return window.matchMedia("(prefers-color-scheme: dark)").matches;
+    }
+    return current === "light";
+  },
+
   set(name, save = true) {
     const resolvedName = theme.SUPPORTED_THEMES.includes(name)
       ? name
@@ -61,6 +72,10 @@ const theme = {
       themeToggleBtnIcon.classList = "sun icon";
     } else {
       themeToggleBtnIcon.classList = "adjust icon";
+    }
+
+    if (window.aiChat) {
+      window.aiChat.updateTheme(isLight);
     }
 
     document.querySelectorAll("[data-content]").forEach((e) => {
