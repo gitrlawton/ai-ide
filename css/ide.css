@@ -1,21 +1,32 @@
 .judge0-file-menu {
-    min-width: 15rem !important;
+  min-width: 15rem !important;
 }
 
 #judge0-status-line {
-    font-family: "JetBrains Mono" !important;
+  font-family: "JetBrains Mono" !important;
 }
 
 #judge0-status-line:empty {
-    display: none;
+  display: none;
 }
 
 .judge0-hidden {
-    display: none !important;
+  display: none !important;
 }
 
 @media (display-mode: standalone) {
-    .judge0-standalone-hidden {
-        display: none !important;
-    }
+  .judge0-standalone-hidden {
+    display: none !important;
+  }
+}
+
+.judge0-llm-menu {
+  min-width: 200px !important;
+  max-width: 250px !important;
+}
+
+.judge0-llm-menu .item {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

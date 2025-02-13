@@ -29,6 +29,9 @@ const INITIAL_WAIT_TIME_MS = 0;
 const WAIT_TIME_FUNCTION = (i) => 100;
 const MAX_PROBE_REQUESTS = 50;
 
+// Global variable to store selected LLM
+let selectedLLM = ""; // Default
+
 var fontSize = 13;
 
 var layout;
@@ -547,6 +550,24 @@ function refreshLayoutSize() {
   layout.updateSize();
 }
 
+// Function to handle LLM selection
+function handleLLMSelection() {
+  // Use Semantic UI dropdown method for full initialization
+  $("#judge0-llm-dropdown").dropdown({
+    onChange: function (value, text, $selectedItem) {
+      if (value) {
+        selectedLLM = value;
+        console.log(`Selected LLM: ${selectedLLM}`);
+      }
+    },
+  });
+}
+
+// Call the handleLLMSelection function during initialization
+document.addEventListener("DOMContentLoaded", function () {
+  handleLLMSelection();
+});
+
 // Define messagesArea
 const messagesArea = document.createElement("div");
 messagesArea.id = "golden-chatbot-messages";
@@ -758,7 +779,6 @@ document.addEventListener("DOMContentLoaded", async function () {
         "display:flex; padding:10px; padding-bottom:30px; background-color:#e0e0e0; ";
 
       const inputField = document.createElement("input");
-      inputField.id = "golden-chatbot-input";
       inputField.type = "text";
       inputField.placeholder = "Ask me anything...";
       inputField.style.cssText = "flex-grow:1; margin-right:10px;";
@@ -805,7 +825,7 @@ document.addEventListener("DOMContentLoaded", async function () {
           const thinkingId = "thinking-" + Date.now();
           addMessage("Judge0", "", thinkingId, true); // Pass true for isThinking
 
-          // Send message to OpenRouter API
+          // Send message to OpenRouter API via the backend
           fetch("http://localhost:3000/api/side-chat", {
             method: "POST",
             headers: {
@@ -814,6 +834,7 @@ document.addEventListener("DOMContentLoaded", async function () {
             body: JSON.stringify({
               message: message,
               fileContent: fileContent,
+              llm: selectedLLM,
             }),
           })
             .then((response) => {
@@ -1459,6 +1480,7 @@ function sendAILineChatQuery(query, codeContext) {
     context: {
       type: "line_chat",
       codeSnippet: codeContext,
+      llm: selectedLLM,
     },
   };
 

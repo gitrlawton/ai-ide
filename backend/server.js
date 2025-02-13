@@ -14,7 +14,16 @@ app.use(express.json()); // Parse JSON bodies
 // Route to handle messages in side chat
 app.post("/api/side-chat", async (req, res) => {
   try {
-    const { message, fileContent } = req.body;
+    const { message, fileContent, llm } = req.body;
+
+    // // Validate LLM selection
+    // if (!llm || llm.trim() === "") {
+    //   return res.status(400).json({
+    //     error:
+    //       "No LLM model selected. Please choose a model from the dropdown.",
+    //     code: "NO_LLM_SELECTED",
+    //   });
+    // }
 
     const response = await fetch(
       "https://openrouter.ai/api/v1/chat/completions",
@@ -27,7 +36,7 @@ app.post("/api/side-chat", async (req, res) => {
           "X-Title": "AI-IDE",
         },
         body: JSON.stringify({
-          model: "google/gemini-2.0-flash-lite-preview-02-05:free",
+          model: llm,
           messages: [
             {
               role: "system",
