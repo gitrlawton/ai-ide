@@ -34,7 +34,7 @@
 
 /* End of Judge0 written */
 
-/* Container Layout */
+/* Chatbot container Layout */
 #judge0-chat-container {
   display: flex;
   flex-direction: column;
@@ -47,11 +47,28 @@
   background-color: #1b1c1d;
 }
 
+.ui.selection.dropdown > .dropdown.icon {
+  right: auto !important;
+  left: 1em;
+}
+
+.ui.selection.dropdown > .text,
+.ui.selection.dropdown > .default.text {
+  padding-left: 1em !important;
+  padding-right: 0;
+}
+
+.inverted .ui.selection.dropdown > .dropdown.icon {
+  color: #999 !important;
+  right: auto !important;
+  left: 1em;
+}
+
 /* Main Dropdown Styles */
 #judge0-llm-dropdown {
   border: none !important;
   background: transparent !important;
-  width: 148px !important;
+  width: 154px !important;
   opacity: 1 !important;
 }
 
@@ -62,7 +79,6 @@
 
 #judge0-llm-dropdown .menu {
   border: 1px solid rgb(196, 195, 195) !important;
-  /* box-shadow: none !important; */
 }
 
 /* Dropdown Items */

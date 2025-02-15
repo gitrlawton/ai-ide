@@ -69,6 +69,7 @@ export class AIChatHistory {
 
       const fileContent = this.sourceEditor.getValue();
       const selectedModel = $("#judge0-llm-dropdown").dropdown("get value");
+      console.log("Selected Model (ai.js): " + selectedModel);
 
       if (!selectedModel) {
         throw new Error(`Error: No model selected when sending message.`);
@@ -218,9 +219,5 @@ export class AIChatHistory {
     });
   }
 
-  initializeChat() {
-    this.addAIMessage(
-      "Hello! I'm your AI coding assistant. How can I help you today?"
-    );
-  }
+  initializeChat() {}
 }

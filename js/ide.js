@@ -733,14 +733,15 @@ document.addEventListener("DOMContentLoaded", async function () {
         transition: opacity 0.2s;
       `;
       dropdownContainer.innerHTML = `
-        <i class="dropdown icon"></i>
-        <div class="default text" style="font-size: 10px;">Select Model</div>
+        <input type="hidden" name="model" value="google/gemini-2.0-flash-lite-preview-02-05:free">
+        <i class="dropdown icon" style="float: left;"></i>
+        <div class="text" style="font-size: 10px;">Gemini Flash Lite 2.0</div>
         <div class="menu">
-          <div class="item" style="font-size: 10px;" data-value="google/gemini-2.0-flash-lite-preview-02-05:free">Gemini Flash Lite 2.0</div>
-          <div class="item" style="font-size: 10px;" data-value="google/gemini-2.0-flash-exp:free">Gemini Flash 2.0 (p)</div>
+          <div class="item active selected" style="font-size: 10px;" data-value="google/gemini-2.0-flash-lite-preview-02-05:free">Gemini Flash Lite 2.0</div>
+          <div class="item" style="font-size: 10px;" data-value="google/gemini-2.0-flash-exp:free">Gemini Flash 2.0 (c)</div>
           <div class="item" style="font-size: 10px;" data-value="google/gemini-2.0-flash-thinking-exp:free">Gemini 2.0 Flash Thinking</div>
           <div class="item" style="font-size: 10px;" data-value="google/gemini-2.0-pro-exp-02-05:free">Gemini Pro 2.0</div>
-          <div class="item" style="font-size: 10px;" data-value="deepseek/deepseek-chat:free">DeepSeek V3 (p)</div>
+          <div class="item" style="font-size: 10px;" data-value="deepseek/deepseek-chat:free">DeepSeek V3 (c)</div>
           <div class="item" style="font-size: 10px;" data-value="deepseek/deepseek-r1:free">DeepSeek R1</div>
         </div>
       `;

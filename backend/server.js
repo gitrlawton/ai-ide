@@ -79,9 +79,17 @@ app.post("/api/chat", async (req, res) => {
         if (line.includes("[DONE]")) continue;
 
         try {
-          const parsed = JSON.parse(line.replace(/^data: /, ""));
-          if (parsed.choices?.[0]?.delta?.content) {
-            res.write(`data: ${JSON.stringify(parsed)}\n\n`);
+          const cleanedLine = line.replace(/^data:\s*/, "").trim();
+          if (!cleanedLine) continue;
+
+          // Only try to parse if it looks like JSON
+          if (cleanedLine.startsWith("{")) {
+            const parsed = JSON.parse(cleanedLine);
+            if (parsed.choices?.[0]?.delta?.content) {
+              res.write(`data: ${JSON.stringify(parsed)}\n\n`);
+            }
+          } else {
+            console.log("Skipping non-JSON line:", cleanedLine);
           }
         } catch (e) {
           console.error("Error parsing chunk:", e);
