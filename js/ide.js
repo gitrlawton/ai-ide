@@ -1,5 +1,6 @@
 import { IS_PUTER } from "./puter.js";
 import { AIChatHistory } from "./ai.js";
+import theme from "./theme.js";
 
 const API_KEY = ""; // Get yours at https://platform.sulu.sh/apis/judge0
 
@@ -689,6 +690,8 @@ document.addEventListener("DOMContentLoaded", async function () {
     });
 
     layout.registerComponent("chatbot", function (container, state) {
+      // Get the current theme state immediately
+      const isLight = theme.isLight();
       // Create the container and its elements
       const chatContainer = document.createElement("div");
       chatContainer.id = "judge0-chat-container";
@@ -697,11 +700,13 @@ document.addEventListener("DOMContentLoaded", async function () {
       // Create messages container
       const messagesDiv = document.createElement("div");
       messagesDiv.id = "judge0-chat-messages";
+      messagesDiv.className = `${isLight ? "" : "inverted"}`;
       chatContainer.appendChild(messagesDiv);
 
       // Create input container
       const inputContainer = document.createElement("div");
       inputContainer.id = "judge0-chat-input-container";
+      inputContainer.className = isLight ? "" : "inverted";
 
       // Create form
       const form = document.createElement("form");
@@ -715,6 +720,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
       const textarea = document.createElement("textarea");
       textarea.id = "judge0-chat-user-input";
+      textarea.className = isLight ? "" : "inverted";
       textarea.rows = 2;
 
       textarea.placeholder = "Ask me anything about your code...";
@@ -1113,6 +1119,11 @@ function showInlineChatInput(editor, selection) {
 
   input.onkeydown = async (e) => {
     if (e.key === "Enter" && !e.isComposing) {
+      const userInput = input.value.trim();
+      if (userInput === "") {
+        return;
+      }
+
       const selectedText = editor.getModel().getValueInRange(selection);
       // Ensure each line of code is on its own line by splitting and joining
       const formattedCode = selectedText.split("\n").join("\n");

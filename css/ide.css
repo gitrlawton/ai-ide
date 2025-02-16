@@ -34,13 +34,60 @@
 
 /* End of Judge0 written */
 
+/* Programming Language dropdown styles */
+
+/* Light Theme */
+#select-language {
+  color: #666 !important;
+  background-color: #f8f9fa !important;
+  border: 1px solid rgb(196, 195, 195) !important;
+}
+
+#select-language option {
+  color: #2c2c2c !important;
+  background-color: #f8f9fa !important;
+}
+
+#select-language option:hover,
+#select-language option:focus {
+  color: #000000 !important;
+  background-color: #e9ecef !important;
+}
+
+#select-language option:checked {
+  color: #ffffff !important;
+  background-color: #0e4177 !important;
+}
+
+/* Dark Theme */
+.inverted #select-language {
+  color: #999 !important;
+  background-color: #1e1e1e !important;
+  border: 1px solid #999 !important;
+}
+
+.inverted #select-language option {
+  color: #e1e1e1 !important;
+  background-color: #1e1e1e !important;
+}
+
+.inverted #select-language option:hover,
+.inverted #select-language option:focus {
+  color: #ffffff !important;
+  background-color: #2d2d2d !important;
+}
+
+.inverted #select-language option:checked {
+  color: #ffffff !important;
+  background-color: #0e4177 !important;
+}
+
 /* Chatbot container Layout */
 #judge0-chat-container {
   display: flex;
   flex-direction: column;
   height: 100%;
   background-color: #ffffff;
-  transition: background-color 0.3s ease;
 }
 
 #judge0-chat-container.inverted {
@@ -133,7 +180,6 @@
   gap: 1rem;
   scrollbar-width: thin;
   background-color: #ffffff;
-  transition: background-color 0.3s ease;
 }
 
 #judge0-chat-messages.inverted {
@@ -217,7 +263,6 @@
   padding: 1rem;
   border-top: 1px solid #e0e0e0;
   background-color: #ffffff;
-  transition: all 0.3s ease;
 }
 
 #judge0-chat-input-container.inverted {
@@ -240,7 +285,6 @@
   font-family: inherit;
   font-size: 0.95rem;
   line-height: 1.4;
-  transition: all 0.3s ease;
   background-color: #ffffff;
   color: #2c2c2c;
 }
